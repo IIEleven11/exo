@@ -229,22 +229,28 @@ async def windows_device_capabilities() -> DeviceCapabilities:
   import psutil
 
   def get_gpu_info():
+    import pythoncom
     import win32com.client  # install pywin32
 
-    wmiObj = win32com.client.GetObject("winmgmts:\\\\.\\root\\cimv2")
-    gpus = wmiObj.ExecQuery("SELECT * FROM Win32_VideoController")
+    # Initialize COM for this thread
+    pythoncom.CoInitialize()
+    try:
+      wmiObj = win32com.client.GetObject("winmgmts:\\\\.\\root\\cimv2")
+      gpus = wmiObj.ExecQuery("SELECT * FROM Win32_VideoController")
 
-    gpu_info = []
-    for gpu in gpus:
-      info = {
-        "Name": gpu.Name,
-        "AdapterRAM": gpu.AdapterRAM,  # Bug in this property, returns -ve for VRAM > 4GB (uint32 overflow)
-        "DriverVersion": gpu.DriverVersion,
-        "VideoProcessor": gpu.VideoProcessor
-      }
-      gpu_info.append(info)
+      gpu_info = []
+      for gpu in gpus:
+        info = {
+          "Name": gpu.Name,
+          "AdapterRAM": gpu.AdapterRAM,  # Bug in this property, returns -ve for VRAM > 4GB (uint32 overflow)
+          "DriverVersion": gpu.DriverVersion,
+          "VideoProcessor": gpu.VideoProcessor
+        }
+        gpu_info.append(info)
 
-    return gpu_info
+      return gpu_info
+    finally:
+      pythoncom.CoUninitialize()
 
   gpus_info = await asyncio.get_running_loop().run_in_executor(subprocess_pool, get_gpu_info)
   gpu_names = [gpu['Name'] for gpu in gpus_info]

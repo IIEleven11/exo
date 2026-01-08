@@ -47,11 +47,11 @@ extras_require = {
 if sys.platform.startswith("darwin") and platform.machine() == "arm64":
   install_requires.extend(extras_require["apple_silicon"])
 
-# Check if running Windows - don't add uvloop
+# Check if running Windows - don't add uvloop.
 if sys.platform.startswith("win32"):
   install_requires.extend(extras_require["windows"])
 else:
-  # Add uvloop for Unix-like systems (Linux, macOS)
+  # Add uvloop for Unix-like systems (Linux, macOS).
   install_requires.extend(extras_require["unix"])
 
 

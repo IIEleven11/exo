@@ -32,21 +32,25 @@ from exo.inference.inference_engine import get_inference_engine, InferenceEngine
 from exo.inference.tokenizers import resolve_tokenizer
 from exo.models import build_base_shard, get_repo
 from exo.viz.topology_viz import TopologyViz
-import uvloop
 from contextlib import asynccontextmanager
 import concurrent.futures
-import resource
 import psutil
+
+# uvloop is not available on Windows, so we conditionally import it
+if not psutil.WINDOWS:
+  import uvloop
+  import resource
 
 # TODO: figure out why this is happening
 os.environ["GRPC_VERBOSITY"] = "error"
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
-# Configure uvloop for maximum performance
-def configure_uvloop():
-    # Install uvloop as event loop policy
-    uvloop.install()
+# Configure event loop for maximum performance (uvloop on Unix, default on Windows)
+def configure_event_loop():
+    # Install uvloop as event loop policy on non-Windows systems
+    if not psutil.WINDOWS:
+      uvloop.install()
 
     # Create new event loop
     loop = asyncio.new_event_loop()
@@ -395,7 +399,7 @@ async def setup_node(args):
 def run():
     loop = None
     try:
-        loop = configure_uvloop()
+        loop = configure_event_loop()
         loop.run_until_complete(main())
     except KeyboardInterrupt:
         print("\nShutdown requested... exiting")

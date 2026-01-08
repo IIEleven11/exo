@@ -225,28 +225,34 @@ async def linux_device_capabilities() -> DeviceCapabilities:
     )
 
 
-def windows_device_capabilities() -> DeviceCapabilities:
+async def windows_device_capabilities() -> DeviceCapabilities:
   import psutil
 
   def get_gpu_info():
+    import pythoncom
     import win32com.client  # install pywin32
 
-    wmiObj = win32com.client.GetObject("winmgmts:\\\\.\\root\\cimv2")
-    gpus = wmiObj.ExecQuery("SELECT * FROM Win32_VideoController")
+    # Initialize COM for this thread
+    pythoncom.CoInitialize()
+    try:
+      wmiObj = win32com.client.GetObject("winmgmts:\\\\.\\root\\cimv2")
+      gpus = wmiObj.ExecQuery("SELECT * FROM Win32_VideoController")
 
-    gpu_info = []
-    for gpu in gpus:
-      info = {
-        "Name": gpu.Name,
-        "AdapterRAM": gpu.AdapterRAM,  # Bug in this property, returns -ve for VRAM > 4GB (uint32 overflow)
-        "DriverVersion": gpu.DriverVersion,
-        "VideoProcessor": gpu.VideoProcessor
-      }
-      gpu_info.append(info)
+      gpu_info = []
+      for gpu in gpus:
+        info = {
+          "Name": gpu.Name,
+          "AdapterRAM": gpu.AdapterRAM,  # Bug in this property, returns -ve for VRAM > 4GB (uint32 overflow)
+          "DriverVersion": gpu.DriverVersion,
+          "VideoProcessor": gpu.VideoProcessor
+        }
+        gpu_info.append(info)
 
-    return gpu_info
+      return gpu_info
+    finally:
+      pythoncom.CoUninitialize()
 
-  gpus_info = get_gpu_info()
+  gpus_info = await asyncio.get_running_loop().run_in_executor(subprocess_pool, get_gpu_info)
   gpu_names = [gpu['Name'] for gpu in gpus_info]
 
   contains_nvidia = any('nvidia' in gpu_name.lower() for gpu_name in gpu_names)
@@ -262,6 +268,8 @@ def windows_device_capabilities() -> DeviceCapabilities:
     gpu_memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
 
     if DEBUG >= 2: print(f"NVIDIA device {gpu_name=} {gpu_memory_info=}")
+
+    pynvml.nvmlShutdown()
 
     return DeviceCapabilities(
       model=f"Windows Box ({gpu_name})",
@@ -282,9 +290,9 @@ def windows_device_capabilities() -> DeviceCapabilities:
     rocml.smi_shutdown()
 
     return DeviceCapabilities(
-      model="Windows Box ({gpu_name})",
-      chip={gpu_name},
-      memory=gpu_memory_info.total // 2**20,
+      model=f"Windows Box ({gpu_name})",
+      chip=gpu_name,
+      memory=gpu_memory_info // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
     )
   else:

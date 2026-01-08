@@ -24,7 +24,7 @@ exo: Run your own AI cluster at home with everyday devices. Maintained by [exo l
 
 ---
 
-Forget expensive NVIDIA GPUs, unify your existing devices into one powerful GPU: iPhone, iPad, Android, Mac, Linux, pretty much any device!
+Forget expensive NVIDIA GPUs, unify your existing devices into one powerful GPU: iPhone, iPad, Android, Mac, Linux, Windows, pretty much any device!
 
 <div align="center">
   <h2>Update: exo is hiring. See <a href="https://exolabs.net">here</a> for more details.</h2>
@@ -69,10 +69,16 @@ The current recommended way to install exo is from source.
 ### Prerequisites
 
 - Python>=3.12.0 is required because of [issues with asyncio](https://github.com/exo-explore/exo/issues/5) in previous versions.
-- For Linux with NVIDIA GPU support (Linux-only, skip if not using Linux or NVIDIA):
+- For Linux with NVIDIA GPU support:
   - NVIDIA driver - verify with `nvidia-smi`
   - CUDA toolkit - install from [NVIDIA CUDA guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#cuda-cross-platform-installation), verify with `nvcc --version`
   - cuDNN library - download from [NVIDIA cuDNN page](https://developer.nvidia.com/cudnn-downloads), verify installation by following [these steps](https://docs.nvidia.com/deeplearning/cudnn/latest/installation/linux.html#verifying-the-install-on-linux:~:text=at%20a%20time.-,Verifying%20the%20Install%20on%20Linux,Test%20passed!,-Upgrading%20From%20Older)
+- For Windows with NVIDIA GPU support:
+  - NVIDIA driver - verify with `nvidia-smi` in Command Prompt or PowerShell
+  - CUDA toolkit - install from [NVIDIA CUDA Windows guide](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html), verify with `nvcc --version`
+  - cuDNN library - download from [NVIDIA cuDNN page](https://developer.nvidia.com/cudnn-downloads)
+  - Visual Studio Build Tools or Visual Studio with C++ workload (required for some dependencies)
+  - Note: Windows uses the **tinygrad** inference engine with CUDA support
 
 ### Hardware Requirements
 
@@ -89,14 +95,27 @@ The current recommended way to install exo is from source.
 git clone https://github.com/exo-explore/exo.git
 cd exo
 pip install -e .
-# alternatively, with venv
+# alternatively, with venv (Linux/macOS only)
 source install.sh
 ```
 
+### Windows Installation
+
+```powershell
+git clone https://github.com/exo-explore/exo.git
+cd exo
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
+```
 
 ### Troubleshooting
 
 - If running on Mac, MLX has an [install guide](https://ml-explore.github.io/mlx/build/html/install.html) with troubleshooting steps.
+- If running on Windows:
+  - Ensure you have the latest NVIDIA drivers and CUDA toolkit installed
+  - If you encounter `pywin32` issues, try reinstalling it: `pip install --upgrade pywin32`
+  - For network discovery issues, ensure your firewall allows UDP broadcast on port 5678
 
 ### Performance
 
@@ -179,7 +198,7 @@ curl http://localhost:52415/v1/chat/completions \
    }'
 ```
 
-### Example Usage on Multiple Heterogenous Devices (macOS + Linux)
+### Example Usage on Multiple Heterogenous Devices (macOS + Linux + Windows)
 
 #### Device 1 (macOS):
 
@@ -194,7 +213,12 @@ Note: We don't need to explicitly tell exo to use the **tinygrad** inference eng
 exo
 ```
 
-Linux devices will automatically default to using the **tinygrad** inference engine.
+#### Device 3 (Windows):
+```powershell
+exo
+```
+
+Linux and Windows devices will automatically default to using the **tinygrad** inference engine.
 
 You can read about tinygrad-specific env vars [here](https://docs.tinygrad.org/env_vars/). For example, you can configure tinygrad to use the cpu by specifying `CLANG=1`.
 
